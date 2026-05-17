@@ -5,8 +5,8 @@ then uses OpenAI to generate a plain-language health explanation.
 """
 
 import os
-import requests
 import streamlit as st
+from ml_service import predict
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -43,8 +43,6 @@ st.markdown(
 )
 st.markdown("---")
 
-API_URL = os.environ.get("ML_API_URL", "http://localhost:8000/predict")
-
 # ── Input form ────────────────────────────────────────────────────────────────
 with st.form("risk_form"):
     col1, col2 = st.columns(2)
@@ -72,34 +70,11 @@ with st.form("risk_form"):
 
 # ── Prediction flow ───────────────────────────────────────────────────────────
 if submitted:
-    # 1. Call ML API
-    with st.spinner("Contacting ML service…"):
-        try:
-            resp = requests.post(
-                API_URL,
-                json={
-                    "age": age,
-                    "bmi": bmi,
-                    "glucose": glucose,
-                    "diabetic_pedigree_function": dpf,
-                },
-                timeout=15,
-            )
-            resp.raise_for_status()
-            result = resp.json()
-        except requests.exceptions.ConnectionError:
-            st.error(
-                "Cannot reach the ML API. Make sure `python ml_service.py` is "
-                "running in a separate terminal."
-            )
-            st.stop()
-        except Exception as e:
-            st.error(f"API error: {e}")
-            st.stop()
-
-    prediction = result["prediction"]
-    confidence = result["confidence"]
-    model_used = result.get("model_used", "unknown")
+    # 1. Run prediction
+    with st.spinner("Analyzing…"):
+        prediction, confidence, model_used = predict(
+            age=age, bmi=bmi, glucose=glucose, diabetic_pedigree_function=dpf
+        )
 
     # 2. Display result banner
     st.markdown("### 🎯 Risk Assessment")
@@ -118,12 +93,12 @@ if submitted:
     st.markdown("---")
 
     # 3. LLM explanation
-    openai_key = (
-        os.environ.get("OPENAI_API_KEY")
-        or st.secrets.get("OPENAI_API_KEY", "")
-        if hasattr(st, "secrets")
-        else ""
-    )
+    openai_key = os.environ.get("OPENAI_API_KEY", "")
+    if not openai_key:
+        try:
+            openai_key = st.secrets.get("OPENAI_API_KEY", "")
+        except Exception:
+            openai_key = ""
 
     if not openai_key:
         st.info(

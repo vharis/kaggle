@@ -6,7 +6,8 @@
       "Bash(source:*)",
       "Bash(PROJECT_SUMMARY.md:*)",
       "Bash(ls -lh *.py *.txt *.md *.sh)",
-      "Bash(chmod +x:*)"
+      "Bash(chmod +x:*)",
+      "Bash(bash:*)"
     ]
   }
 }
