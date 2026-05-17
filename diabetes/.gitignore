@@ -59,5 +59,3 @@ htmlcov/
 .ipynb_checkpoints/
 *.ipynb
 
-# Data analysis artifacts
-diabetes_analysis.png
