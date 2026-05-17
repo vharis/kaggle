@@ -6,11 +6,16 @@ Falls back to a rule-based classifier if training fails.
 """
 
 import os
+from pathlib import Path
 import joblib
 
 FEATURES = ['Glucose', 'BMI', 'DiabetesPedigreeFunction', 'Age']
-MODEL_PATH = 'model.pkl'
-SCALER_PATH = 'scaler_api.pkl'
+
+# Absolute paths relative to this file — works locally and on Streamlit Cloud
+_DIR = Path(__file__).parent
+MODEL_PATH  = str(_DIR / 'model.pkl')
+SCALER_PATH = str(_DIR / 'scaler_api.pkl')
+DATA_PATH   = str(_DIR / 'diabetes.csv')
 
 
 def train_and_save():
@@ -20,7 +25,7 @@ def train_and_save():
     from sklearn.preprocessing import StandardScaler
     from sklearn.ensemble import RandomForestClassifier
 
-    df = pd.read_csv('diabetes.csv')
+    df = pd.read_csv(DATA_PATH)
     for col in ['Glucose', 'BMI']:
         median = df.loc[df[col] != 0, col].median()
         df[col] = df[col].replace(0, median)
