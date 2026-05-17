@@ -6,7 +6,10 @@ then uses OpenAI to generate a plain-language health explanation.
 
 import os
 import streamlit as st
-from ml_service import predict
+from pathlib import Path
+from ml_service import predict, get_model_metrics
+
+_DIR = Path(__file__).parent
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -41,6 +44,53 @@ st.markdown(
     "Enter your health metrics and click **Analyze Risk** for an instant ML-powered "
     "assessment plus a personalized explanation."
 )
+st.markdown("---")
+
+# ── Model Performance Panel ───────────────────────────────────────────────────
+with st.expander("📊 Model Evaluation Metrics", expanded=False):
+    _metrics = get_model_metrics()
+    if _metrics:
+        m_col1, m_col2, m_col3, m_col4, m_col5 = st.columns(5)
+        m_col1.metric("Accuracy",  f"{_metrics['accuracy']*100:.1f}%")
+        m_col2.metric("Precision", f"{_metrics['precision']*100:.1f}%")
+        m_col3.metric("Recall",    f"{_metrics['recall']*100:.1f}%")
+        m_col4.metric("F1 Score",  f"{_metrics['f1']*100:.1f}%")
+        m_col5.metric("ROC AUC",   f"{_metrics['roc_auc']:.3f}")
+
+        st.markdown("**Score breakdown**")
+        bar_metrics = {
+            "Accuracy":  _metrics["accuracy"],
+            "Precision": _metrics["precision"],
+            "Recall":    _metrics["recall"],
+            "F1 Score":  _metrics["f1"],
+            "ROC AUC":   _metrics["roc_auc"],
+        }
+        for label, val in bar_metrics.items():
+            color = "#51cf66" if val >= 0.80 else "#ffd43b" if val >= 0.70 else "#ff6b6b"
+            st.markdown(
+                f"<div style='margin-bottom:6px'>"
+                f"<span style='width:90px;display:inline-block;font-size:13px'>{label}</span>"
+                f"<span style='display:inline-block;background:{color};width:{val*260:.0f}px;"
+                f"height:14px;border-radius:4px;vertical-align:middle'></span>"
+                f" <span style='font-size:13px;color:#555'>{val:.4f}</span>"
+                f"</div>",
+                unsafe_allow_html=True,
+            )
+
+        st.caption(
+            f"Model: **{_metrics.get('model_type','RandomForest')}** · "
+            f"Features: {', '.join(_metrics.get('features', []))} · "
+            f"Train / Test split: {_metrics.get('train_size','–')} / {_metrics.get('test_size','–')} samples"
+        )
+    else:
+        st.info("Evaluation metrics are not available for the rule-based fallback classifier.")
+
+    _img_path = _DIR / "diabetes_analysis.png"
+    if _img_path.exists():
+        st.markdown("**Visual Analysis**")
+        st.image(str(_img_path), use_container_width=True,
+                 caption="Confusion matrix · ROC curve · Model comparison · Outcome distribution")
+
 st.markdown("---")
 
 # ── Input form ────────────────────────────────────────────────────────────────
